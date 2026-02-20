@@ -1,0 +1,34 @@
+# macOS
+.DS_Store
+
+# SwiftPM / build outputs
+/.build/
+/Packages/
+/.swiftpm/
+
+# Xcode user data
+xcuserdata/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+
+# Local runtime/temp/output
+/.cache/
+/.tmp/
+/dist/
+*.log
+
+# Bundles/artifacts
+*.app
+*.dSYM
+*.xcresult
+*.ipa
+
+# Local credentials
+.netrc
+.env
+.env.*
+
+# Local planning docs
+PR_Tracker_Design_Summary.md
+PR_Tracker_Implementation_Summary.md

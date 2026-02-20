@@ -1,0 +1,110 @@
+name: Build and Publish Binary Package
+
+on:
+  push:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-publish:
+    runs-on: macos-15
+    env:
+      PRODUCT_NAME: PRPulseApp
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Build release app bundle archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift build -c release --product "$PRODUCT_NAME"
+          BIN_PATH="$(swift build -c release --show-bin-path)"
+
+          mkdir -p dist
+          APP_BUNDLE="dist/${PRODUCT_NAME}.app"
+          APP_CONTENTS="${APP_BUNDLE}/Contents"
+          APP_MACOS="${APP_CONTENTS}/MacOS"
+          APP_RESOURCES="${APP_CONTENTS}/Resources"
+          mkdir -p "$APP_MACOS" "$APP_RESOURCES"
+
+          cp "$BIN_PATH/$PRODUCT_NAME" "$APP_MACOS/$PRODUCT_NAME"
+          chmod +x "$APP_MACOS/$PRODUCT_NAME"
+
+          if [ -d "$BIN_PATH/${PRODUCT_NAME}_${PRODUCT_NAME}.resources" ]; then
+            cp -R "$BIN_PATH/${PRODUCT_NAME}_${PRODUCT_NAME}.resources" "$APP_RESOURCES/"
+          fi
+
+          cat > "${APP_CONTENTS}/Info.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDisplayName</key>
+            <string>PR Pulse</string>
+            <key>CFBundleExecutable</key>
+            <string>PRPulseApp</string>
+            <key>CFBundleIdentifier</key>
+            <string>dev.prpulse.app</string>
+            <key>CFBundleName</key>
+            <string>PRPulse</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>0.1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>13.0</string>
+            <key>LSUIElement</key>
+            <true/>
+          </dict>
+          </plist>
+          PLIST
+
+          ARCHIVE_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.tar.gz"
+          tar -czf "dist/$ARCHIVE_NAME" -C dist "${PRODUCT_NAME}.app"
+          shasum -a 256 "dist/$ARCHIVE_NAME" > "dist/${ARCHIVE_NAME}.sha256"
+
+      - name: Install ORAS CLI
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        shell: bash
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish archive to GitHub Packages (GHCR)
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          PACKAGE_REF="ghcr.io/${OWNER_LC}/prpulse-app"
+          ARCHIVE="dist/${PRODUCT_NAME}-macos-${GITHUB_SHA}.tar.gz"
+          CHECKSUM="${ARCHIVE}.sha256"
+
+          oras push "${PACKAGE_REF}:sha-${GITHUB_SHA}" \
+            "${ARCHIVE}:application/vnd.prpulse.binary.v1+gzip" \
+            "${CHECKSUM}:text/plain"
+
+          if [ "${GITHUB_REF_NAME}" = "${DEFAULT_BRANCH}" ]; then
+            oras push "${PACKAGE_REF}:latest" \
+              "${ARCHIVE}:application/vnd.prpulse.binary.v1+gzip" \
+              "${CHECKSUM}:text/plain"
+          fi
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PRPulseApp-macos-${{ github.sha }}
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256

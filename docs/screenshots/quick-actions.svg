@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="760" viewBox="0 0 1080 760" role="img" aria-label="PR Pulse quick actions menu">
+  <defs>
+    <style>
+      .t { font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; fill: #111827; }
+      .m { fill: #6b7280; }
+      .card { fill: #ffffff; stroke: #dbe2ea; }
+    </style>
+  </defs>
+  <rect width="1080" height="760" fill="#f5f7fb"/>
+  <rect x="70" y="60" width="940" height="640" rx="14" class="card"/>
+
+  <text x="106" y="110" class="t" font-size="28" font-weight="700">Quick Actions on a PR</text>
+  <text x="106" y="140" class="t m" font-size="16">Open a PR row menu to triage fast without leaving the menubar.</text>
+
+  <rect x="106" y="174" width="868" height="112" rx="10" class="card"/>
+  <text x="128" y="212" class="t" font-size="20" font-weight="650">Fix flaky integration test on release workflow</text>
+  <text x="128" y="238" class="t m" font-size="15">acme/prpulse • #433 • review requested</text>
+  <rect x="760" y="206" width="192" height="44" rx="10" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="856" y="234" class="t" font-size="15" font-weight="600" text-anchor="middle">Actions</text>
+
+  <rect x="748" y="258" width="226" height="380" rx="12" class="card"/>
+  <text x="770" y="294" class="t" font-size="18" font-weight="650">PR Actions</text>
+
+  <rect x="764" y="316" width="194" height="38" rx="8" fill="#ecfeff" stroke="#bae6fd"/>
+  <text x="861" y="340" class="t" font-size="14" font-weight="600" text-anchor="middle">Mark TODO</text>
+
+  <rect x="764" y="364" width="194" height="38" rx="8" fill="#fef2f2" stroke="#fecaca"/>
+  <text x="861" y="388" class="t" font-size="14" font-weight="600" text-anchor="middle">Mark Not Applicable</text>
+
+  <rect x="764" y="412" width="194" height="38" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
+  <text x="861" y="436" class="t" font-size="14" font-weight="600" text-anchor="middle">Clear Override</text>
+
+  <rect x="764" y="460" width="194" height="38" rx="8" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="861" y="484" class="t" font-size="14" font-weight="600" text-anchor="middle">Snooze Until Tomorrow</text>
+
+  <rect x="764" y="508" width="194" height="38" rx="8" fill="#f5f3ff" stroke="#ddd6fe"/>
+  <text x="861" y="532" class="t" font-size="14" font-weight="600" text-anchor="middle">Snooze Until Date...</text>
+
+  <rect x="764" y="556" width="194" height="38" rx="8" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="861" y="580" class="t" font-size="14" font-weight="600" text-anchor="middle">Open on GitHub</text>
+
+  <text x="106" y="344" class="t" font-size="18" font-weight="600">What each action does</text>
+  <text x="106" y="378" class="t m" font-size="15">• TODO: keep it actionable in your queue.</text>
+  <text x="106" y="408" class="t m" font-size="15">• Not Applicable: hide from actionable workflows.</text>
+  <text x="106" y="438" class="t m" font-size="15">• Snooze: hide temporarily and schedule a reminder notification.</text>
+  <text x="106" y="468" class="t m" font-size="15">• Clear Override: remove TODO/NA/Snooze state.</text>
+</svg>

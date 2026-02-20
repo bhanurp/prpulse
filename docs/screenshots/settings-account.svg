@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" role="img" aria-label="PR Pulse settings account and notifications">
+  <defs>
+    <linearGradient id="bg2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eef2ff"/>
+    </linearGradient>
+    <style>
+      .t { font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif; fill: #1f2937; }
+      .m { fill: #6b7280; }
+      .card { fill: #ffffff; stroke: #dbe2ea; }
+    </style>
+  </defs>
+  <rect width="1200" height="820" fill="url(#bg2)"/>
+  <rect x="40" y="28" width="1120" height="764" rx="16" class="card"/>
+
+  <text x="76" y="82" class="t" font-size="30" font-weight="700">Settings</text>
+  <text x="76" y="110" class="t m" font-size="16">Connect your GitHub token, configure refresh, notifications, and watched repositories.</text>
+
+  <rect x="76" y="146" width="1048" height="166" rx="12" class="card"/>
+  <text x="96" y="182" class="t" font-size="22" font-weight="650">Account</text>
+  <text x="96" y="212" class="t m" font-size="15">GitHub Token</text>
+  <rect x="96" y="224" width="744" height="40" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
+  <text x="114" y="250" class="t m" font-size="14">ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</text>
+  <rect x="860" y="224" width="124" height="40" rx="8" fill="#dbeafe"/>
+  <text x="922" y="250" class="t" font-size="14" font-weight="600" text-anchor="middle">Save Token</text>
+  <rect x="996" y="224" width="116" height="40" rx="8" fill="#fee2e2"/>
+  <text x="1054" y="250" class="t" font-size="14" font-weight="600" text-anchor="middle">Clear Token</text>
+  <circle cx="106" cy="284" r="6" fill="#22c55e"/>
+  <text x="120" y="289" class="t m" font-size="14">Token saved in Keychain</text>
+  <text x="360" y="289" class="t m" font-size="14">Viewer: octocat</text>
+
+  <rect x="76" y="330" width="1048" height="124" rx="12" class="card"/>
+  <text x="96" y="366" class="t" font-size="22" font-weight="650">Refresh</text>
+  <text x="96" y="396" class="t m" font-size="15">Refresh on launch: ON</text>
+  <text x="96" y="426" class="t m" font-size="15">Refresh every 5 min</text>
+
+  <rect x="76" y="472" width="1048" height="150" rx="12" class="card"/>
+  <text x="96" y="508" class="t" font-size="22" font-weight="650">Notifications</text>
+  <text x="96" y="538" class="t m" font-size="15">Needs re-review: ON</text>
+  <text x="96" y="566" class="t m" font-size="15">Review requested: ON</text>
+  <text x="96" y="594" class="t m" font-size="15">Digest cadence: Weekly</text>
+
+  <rect x="76" y="640" width="1048" height="130" rx="12" class="card"/>
+  <text x="96" y="676" class="t" font-size="22" font-weight="650">Watched Repositories</text>
+  <text x="96" y="706" class="t m" font-size="15">Add repos in owner/repo format, for example: apple/swift</text>
+  <rect x="96" y="720" width="620" height="32" rx="8" fill="#f9fafb" stroke="#d1d5db"/>
+  <text x="112" y="742" class="t m" font-size="14">owner/repo</text>
+  <rect x="732" y="720" width="92" height="32" rx="8" fill="#dbeafe"/>
+  <text x="778" y="742" class="t" font-size="14" font-weight="600" text-anchor="middle">Add</text>
+</svg>
