@@ -43,7 +43,7 @@ echo <github_pat> | oras login ghcr.io -u <github_username> --password-stdin
 3. Pull latest archive:
 
 ```bash
-oras pull ghcr.io/<owner>/prpulse-app:latest
+oras pull ghcr.io/bhanurp/prpulse-app:latest
 ```
 
 4. Unpack and run:
