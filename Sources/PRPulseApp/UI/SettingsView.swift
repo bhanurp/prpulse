@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 struct SettingsView: View {
@@ -5,10 +6,13 @@ struct SettingsView: View {
     @State private var newRepository = ""
     @State private var tokenInput = ""
     @State private var hasToken = false
+    @State private var isTestingToken = false
+    @State private var tokenTestMessage: String?
+    @State private var tokenTestPassed = false
     private let tokenStore = KeychainTokenStore()
 
     var body: some View {
-        Form {
+        List {
             Section("Account") {
                 SecureField("GitHub Token", text: $tokenInput)
                 HStack(spacing: 12) {
@@ -17,6 +21,7 @@ struct SettingsView: View {
                             try tokenStore.setToken(tokenInput)
                             hasToken = true
                             tokenInput = ""
+                            tokenTestMessage = nil
                         } catch {
                             // Surface via view model error channel
                             viewModel.errorMessage = "Failed to save token: \(error.localizedDescription)"
@@ -28,11 +33,17 @@ struct SettingsView: View {
                         do {
                             try tokenStore.clearToken()
                             hasToken = false
+                            tokenTestMessage = nil
                         } catch {
                             viewModel.errorMessage = "Failed to clear token: \(error.localizedDescription)"
                         }
                     }
                     .disabled(!hasToken)
+
+                    Button(isTestingToken ? "Testing..." : "Test Token") {
+                        Task { await testToken() }
+                    }
+                    .disabled(isTestingToken)
                 }
                 HStack(spacing: 6) {
                     Circle()
@@ -40,6 +51,11 @@ struct SettingsView: View {
                         .frame(width: 8, height: 8)
                     Text(hasToken ? "Token saved in Keychain" : "No token saved")
                         .foregroundColor(.secondary)
+                }
+                if let tokenTestMessage {
+                    Text(tokenTestMessage)
+                        .font(.footnote)
+                        .foregroundStyle(tokenTestPassed ? .green : .secondary)
                 }
                 Text("Viewer: \(viewModel.viewerLogin)")
             }
@@ -146,11 +162,14 @@ struct SettingsView: View {
                 }
             }
         }
-        .padding()
+        .listStyle(.inset)
         .onAppear {
             let existing = tokenStore.getToken()
             hasToken = (existing != nil)
             tokenInput = "" // do not display existing token
+        }
+        .onChange(of: tokenInput) { _ in
+            tokenTestMessage = nil
         }
     }
 
@@ -163,5 +182,73 @@ struct SettingsView: View {
             }
         }
     }
-}
 
+    private func tokenCandidate() -> String? {
+        let typed = tokenInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !typed.isEmpty {
+            return typed
+        }
+        return tokenStore.getToken()
+    }
+
+    @MainActor
+    private func testToken() async {
+        guard let token = tokenCandidate(), !token.isEmpty else {
+            tokenTestPassed = false
+            tokenTestMessage = "Enter a token or save one first."
+            return
+        }
+
+        isTestingToken = true
+        defer { isTestingToken = false }
+        tokenTestPassed = false
+        tokenTestMessage = "Testing token..."
+
+        do {
+            let restViewer = try await validateTokenWithREST(token)
+
+            let client = GitHubAPIClient(
+                tokenProvider: { token },
+                watchedRepositoriesProvider: { [] }
+            )
+            let graphQLViewer = try await client.fetchViewer()
+
+            tokenTestPassed = true
+            tokenTestMessage = "Valid token for \(graphQLViewer.isEmpty ? restViewer : graphQLViewer)."
+        } catch {
+            tokenTestPassed = false
+            tokenTestMessage = "Token test failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func validateTokenWithREST(_ token: String) async throws -> String {
+        struct AuthenticatedUser: Decodable {
+            let login: String
+        }
+
+        var request = URLRequest(url: URL(string: "https://api.github.com/user")!)
+        request.httpMethod = "GET"
+        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+        request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else {
+            throw GitHubClientError.invalidResponse
+        }
+
+        guard http.statusCode == 200 else {
+            switch http.statusCode {
+            case 401:
+                throw GitHubClientError.apiFailure("Invalid token (401 Unauthorized).")
+            case 403:
+                throw GitHubClientError.apiFailure("Token rejected (403 Forbidden). Check token type and repository access.")
+            default:
+                throw GitHubClientError.apiFailure("GitHub auth check failed (\(http.statusCode)).")
+            }
+        }
+
+        let user = try JSONDecoder().decode(AuthenticatedUser.self, from: data)
+        return user.login
+    }
+}

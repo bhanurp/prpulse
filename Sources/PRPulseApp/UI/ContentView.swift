@@ -4,7 +4,7 @@ import AppKit
 struct ContentView: View {
     @ObservedObject var viewModel: DashboardViewModel
     @State private var showDigest = false
-    @State private var showErrorAlert = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 12) {
@@ -69,18 +69,6 @@ struct ContentView: View {
                 viewModel.filtersDidChange()
             }
         }
-        .onChange(of: viewModel.errorMessage) { newValue in
-            showErrorAlert = (newValue != nil)
-        }
-        .alert(isPresented: $showErrorAlert) {
-            Alert(
-                title: Text("Something went wrong"),
-                message: Text(viewModel.errorMessage ?? ""),
-                dismissButton: .default(Text("OK"), action: {
-                    viewModel.clearError()
-                })
-            )
-        }
     }
 
     private var header: some View {
@@ -104,7 +92,7 @@ struct ContentView: View {
                 .keyboardShortcut("r")
 
                 Button {
-                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+                    openWindow(id: "settings-window")
                 } label: {
                     Image(systemName: "gearshape")
                 }
@@ -190,10 +178,41 @@ struct ContentView: View {
                     .font(.footnote)
             }
             Spacer()
+            connectionIndicator
             Button("View digest") {
                 showDigest = true
             }
             .buttonStyle(.bordered)
+        }
+    }
+
+    private var connectionIndicator: some View {
+        Group {
+            if viewModel.connectionState == .connected {
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 8, height: 8)
+                    Text("Connected")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Button {
+                    openWindow(id: "connection-errors-window")
+                } label: {
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(Color.red)
+                            .frame(width: 8, height: 8)
+                        Text("Connection issue")
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                    }
+                }
+                .buttonStyle(.plain)
+                .help("Show connection errors")
+            }
         }
     }
 }

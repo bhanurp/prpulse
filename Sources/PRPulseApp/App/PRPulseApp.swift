@@ -16,9 +16,14 @@ struct PRPulseApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Settings {
+        Window("Settings", id: "settings-window") {
             SettingsView(viewModel: dependencies.dashboard)
                 .frame(width: 520, height: 520)
+        }
+
+        Window("Connection Errors", id: "connection-errors-window") {
+            ConnectionErrorWindowView(viewModel: dependencies.dashboard)
+                .frame(width: 520, height: 340)
         }
     }
 }
@@ -28,8 +33,9 @@ private struct BadgeIcon: View {
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Image(systemName: "tray.full")
-                .symbolRenderingMode(.hierarchical)
+            Image(systemName: "arrow.triangle.branch")
+                .symbolRenderingMode(.monochrome)
+                .foregroundStyle(Color.green)
             if badgeCount > 0 {
                 Text("\(min(99, badgeCount))")
                     .font(.caption2.weight(.bold))

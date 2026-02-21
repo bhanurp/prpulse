@@ -4,6 +4,11 @@ import AppKit
 
 @MainActor
 final class DashboardViewModel: ObservableObject {
+    enum ConnectionState {
+        case connected
+        case error
+    }
+
     struct PullRequestListState {
         var rawItems: [PullRequest] = []
         var displayedItems: [PullRequestPresentation] = []
@@ -28,6 +33,9 @@ final class DashboardViewModel: ObservableObject {
     @Published private(set) var viewerLogin: String = ""
     @Published private(set) var digestSnapshot = DigestSnapshot(openedCount: 0, reviewedCount: 0, timeframeDescription: "N/A")
     @Published var errorMessage: String?
+    @Published private(set) var connectionState: ConnectionState = .connected
+    @Published private(set) var connectionStatusText: String = "Connected"
+    @Published private(set) var connectionErrors: [String] = []
     @Published var settings: AppSettings = .default {
         didSet {
             Task {
@@ -210,6 +218,12 @@ final class DashboardViewModel: ObservableObject {
         errorMessage = nil
     }
 
+    func clearConnectionErrors() {
+        connectionErrors.removeAll()
+        connectionState = .connected
+        connectionStatusText = "Connected"
+    }
+
     func forceDigestRecompute() {
         Task { await updateDigest() }
     }
@@ -244,13 +258,14 @@ final class DashboardViewModel: ObservableObject {
 
         do {
             viewerLogin = try await client.fetchViewer()
+            markConnected()
         } catch {
             if (error as? CancellationError) != nil {
                 // Default without surfacing an error when cancelled
                 viewerLogin = "me"
             } else {
                 viewerLogin = "me"
-                errorMessage = "Viewer lookup failed: \(error.localizedDescription)"
+                markConnectionError("Viewer lookup failed: \(error.localizedDescription)")
             }
         }
 
@@ -304,6 +319,7 @@ final class DashboardViewModel: ObservableObject {
             recomputeDisplayedItems()
             updateBadgeCount()
             lastRefreshAt = Date()
+            markConnected()
         } catch {
             state.isLoading = false
             listStates[tab] = state
@@ -311,7 +327,7 @@ final class DashboardViewModel: ObservableObject {
             if (error as? CancellationError) != nil {
                 return
             }
-            errorMessage = error.localizedDescription
+            markConnectionError(error.localizedDescription)
         }
     }
 
@@ -382,5 +398,21 @@ final class DashboardViewModel: ObservableObject {
         let events = await store.recentActivity(since: cutoff)
         digestSnapshot = digestComputer.makeSnapshot(from: events, cadence: cadence)
     }
-}
 
+    private func markConnected() {
+        connectionState = .connected
+        connectionStatusText = "Connected"
+        connectionErrors.removeAll()
+    }
+
+    private func markConnectionError(_ message: String) {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let entry = "\(Date().formatted(date: .omitted, time: .standard)): \(trimmed)"
+        if connectionErrors.last != entry {
+            connectionErrors.append(entry)
+        }
+        connectionState = .error
+        connectionStatusText = "Connection issue"
+    }
+}
