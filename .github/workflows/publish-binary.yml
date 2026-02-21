@@ -1,18 +1,17 @@
-name: Build and Publish Binary Package
+name: Build and Publish macOS App
 
 on:
   push:
+  workflow_dispatch:
 
 permissions:
-  contents: read
-  packages: write
+  contents: write
 
 jobs:
   build-and-publish:
     runs-on: macos-15
     env:
       PRODUCT_NAME: PRPulseApp
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,7 +21,7 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build release app bundle archive
+      - name: Build release app bundle archives
         shell: bash
         run: |
           set -euo pipefail
@@ -74,37 +73,39 @@ jobs:
           tar -czf "dist/$ARCHIVE_NAME" -C dist "${PRODUCT_NAME}.app"
           shasum -a 256 "dist/$ARCHIVE_NAME" > "dist/${ARCHIVE_NAME}.sha256"
 
-      - name: Install ORAS CLI
-        uses: oras-project/setup-oras@v1
+          ZIP_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "dist/${PRODUCT_NAME}.app" "dist/${ZIP_NAME}"
+          shasum -a 256 "dist/$ZIP_NAME" > "dist/${ZIP_NAME}.sha256"
 
-      - name: Login to GHCR
-        shell: bash
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+          DMG_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.dmg"
+          DMG_ROOT="dist/dmg-root"
+          rm -rf "$DMG_ROOT"
+          mkdir -p "$DMG_ROOT"
+          cp -R "dist/${PRODUCT_NAME}.app" "$DMG_ROOT/"
+          ln -s /Applications "$DMG_ROOT/Applications"
+          hdiutil create -volname "PR Pulse" -srcfolder "$DMG_ROOT" -ov -format UDZO "dist/${DMG_NAME}"
+          shasum -a 256 "dist/${DMG_NAME}" > "dist/${DMG_NAME}.sha256"
 
-      - name: Publish archive to GitHub Packages (GHCR)
-        shell: bash
-        run: |
-          set -euo pipefail
-          OWNER_LC="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
-          PACKAGE_REF="ghcr.io/${OWNER_LC}/prpulse-app"
-          ARCHIVE="dist/${PRODUCT_NAME}-macos-${GITHUB_SHA}.tar.gz"
-          CHECKSUM="${ARCHIVE}.sha256"
-
-          oras push "${PACKAGE_REF}:sha-${GITHUB_SHA}" \
-            "${ARCHIVE}:application/vnd.prpulse.binary.v1+gzip" \
-            "${CHECKSUM}:text/plain"
-
-          if [ "${GITHUB_REF_NAME}" = "${DEFAULT_BRANCH}" ]; then
-            oras push "${PACKAGE_REF}:latest" \
-              "${ARCHIVE}:application/vnd.prpulse.binary.v1+gzip" \
-              "${CHECKSUM}:text/plain"
-          fi
+      - name: Publish Release assets (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.tar.gz.sha256
+            dist/*.zip
+            dist/*.zip.sha256
+            dist/*.dmg
+            dist/*.dmg.sha256
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: PRPulseApp-macos-${{ github.sha }}
           path: |
+            dist/*.dmg
+            dist/*.dmg.sha256
+            dist/*.zip
+            dist/*.zip.sha256
             dist/*.tar.gz
             dist/*.sha256

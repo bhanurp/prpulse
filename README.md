@@ -31,27 +31,24 @@ It also supports triage actions, snoozing, notifications, and digest snapshots.
 
 ## Quick Start (Prebuilt Binary)
 
-If your repo publishes binaries to GHCR (`ghcr.io`), you can run PR Pulse without Xcode.
+You can run PR Pulse without Xcode by downloading the packaged app from GitHub Actions artifacts or GitHub Releases.
 
-1. Install [ORAS](https://oras.land/docs/installation).
-2. Authenticate to GHCR (`read:packages` required):
-
-```bash
-echo <github_pat> | oras login ghcr.io -u <github_username> --password-stdin
-```
-
-3. Pull latest archive:
+Single-command install and open (latest GitHub Release):
 
 ```bash
-oras pull ghcr.io/bhanurp/prpulse-app:latest
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/install_latest_release.sh)" -- <owner>/<repo>
 ```
 
-4. Unpack and run:
+1. Open repository `Releases` (for tagged builds), or `Actions` -> latest successful `Build and Publish macOS App` run.
+2. Download `PRPulseApp-macos-<sha>.dmg`.
+3. Open the DMG and drag `PRPulseApp.app` into `Applications`.
+4. Launch `PR Pulse` from Applications.
 
 ```bash
-tar -xzf PRPulseApp-macos-<commit-sha>.tar.gz
-open PRPulseApp.app
+open /Applications/PRPulseApp.app
 ```
+
+Alternative archives are also published: `.zip` and `.tar.gz`.
 
 ## Build and Run from Source
 
@@ -147,7 +144,7 @@ In `Settings` -> `Notifications`:
 - To explicitly force mock mode for local testing:
 
 ```bash
-PRPULSE_USE_MOCK_CLIENT=1 ./PRPulseApp
+PRPULSE_USE_MOCK_CLIENT=1 "$HOME/Applications/PRPulseApp.app/Contents/MacOS/PRPulseApp"
 ```
 
 ## Troubleshooting
