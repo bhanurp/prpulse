@@ -12,6 +12,7 @@ jobs:
     runs-on: macos-15
     env:
       PRODUCT_NAME: PRPulseApp
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,11 +72,9 @@ jobs:
 
           ARCHIVE_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.tar.gz"
           tar -czf "dist/$ARCHIVE_NAME" -C dist "${PRODUCT_NAME}.app"
-          shasum -a 256 "dist/$ARCHIVE_NAME" > "dist/${ARCHIVE_NAME}.sha256"
 
           ZIP_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.zip"
           ditto -c -k --sequesterRsrc --keepParent "dist/${PRODUCT_NAME}.app" "dist/${ZIP_NAME}"
-          shasum -a 256 "dist/$ZIP_NAME" > "dist/${ZIP_NAME}.sha256"
 
           DMG_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.dmg"
           DMG_ROOT="dist/dmg-root"
@@ -84,28 +83,38 @@ jobs:
           cp -R "dist/${PRODUCT_NAME}.app" "$DMG_ROOT/"
           ln -s /Applications "$DMG_ROOT/Applications"
           hdiutil create -volname "PR Pulse" -srcfolder "$DMG_ROOT" -ov -format UDZO "dist/${DMG_NAME}"
-          shasum -a 256 "dist/${DMG_NAME}" > "dist/${DMG_NAME}.sha256"
+          # Simple end-user filenames for releases
+          cp "dist/${DMG_NAME}" "dist/${PRODUCT_NAME}.dmg"
+          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
+            cp "dist/${DMG_NAME}" "dist/${PRODUCT_NAME}-${GITHUB_REF_NAME}.dmg"
+          fi
 
-      - name: Publish Release assets (tags only)
+      - name: Publish Latest Release (default branch)
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: PRPulse latest
+          prerelease: true
+          make_latest: false
+          target_commitish: ${{ github.sha }}
+          files: |
+            dist/PRPulseApp.dmg
+          overwrite_files: true
+
+      - name: Publish Versioned Release (tags only)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          overwrite_files: true
           files: |
-            dist/*.tar.gz
-            dist/*.tar.gz.sha256
-            dist/*.zip
-            dist/*.zip.sha256
-            dist/*.dmg
-            dist/*.dmg.sha256
+            dist/PRPulseApp-${{ github.ref_name }}.dmg
 
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
         with:
           name: PRPulseApp-macos-${{ github.sha }}
           path: |
-            dist/*.dmg
-            dist/*.dmg.sha256
+            dist/PRPulseApp.dmg
             dist/*.zip
-            dist/*.zip.sha256
             dist/*.tar.gz
-            dist/*.sha256

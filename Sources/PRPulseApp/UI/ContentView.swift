@@ -104,7 +104,7 @@ struct ContentView: View {
                 .keyboardShortcut("r")
 
                 Button {
-                    Task { await viewModel.openSettingsJSON() }
+                    NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
                 } label: {
                     Image(systemName: "gearshape")
                 }

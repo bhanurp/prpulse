@@ -31,7 +31,7 @@ It also supports triage actions, snoozing, notifications, and digest snapshots.
 
 ## Quick Start (Prebuilt Binary)
 
-You can run PR Pulse without Xcode by downloading the packaged app from GitHub Actions artifacts or GitHub Releases.
+You can run PR Pulse without Xcode by downloading the DMG from GitHub Releases.
 
 Single-command install and open (latest GitHub Release):
 
@@ -39,16 +39,14 @@ Single-command install and open (latest GitHub Release):
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/install_latest_release.sh)" -- <owner>/<repo>
 ```
 
-1. Open repository `Releases` (for tagged builds), or `Actions` -> latest successful `Build and Publish macOS App` run.
-2. Download `PRPulseApp-macos-<sha>.dmg`.
+1. Open repository `Releases`.
+2. Download `PRPulseApp.dmg`.
 3. Open the DMG and drag `PRPulseApp.app` into `Applications`.
 4. Launch `PR Pulse` from Applications.
 
 ```bash
 open /Applications/PRPulseApp.app
 ```
-
-Alternative archives are also published: `.zip` and `.tar.gz`.
 
 ## Build and Run from Source
 
