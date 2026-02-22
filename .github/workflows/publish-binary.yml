@@ -2,6 +2,8 @@ name: Build and Publish macOS App
 
 on:
   push:
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +14,8 @@ jobs:
     runs-on: macos-15
     env:
       PRODUCT_NAME: PRPulseApp
-      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      APP_BUNDLE_ID: io.bhanurp.prpulse
+      MIN_MACOS_VERSION: "13.0"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,12 +25,28 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Build release app bundle archives
+      - name: Build app bundle
         shell: bash
         run: |
           set -euo pipefail
-          swift build -c release --product "$PRODUCT_NAME"
-          BIN_PATH="$(swift build -c release --show-bin-path)"
+
+          RAW_VERSION="${GITHUB_REF_NAME:-0.1.0-dev}"
+          VERSION="${RAW_VERSION#v}"
+          BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
+
+          echo "Building arm64 binary..."
+          swift build -c release --arch arm64 --product "$PRODUCT_NAME" --scratch-path .build-arm64
+          BIN_ARM64="$(swift build -c release --arch arm64 --product "$PRODUCT_NAME" --show-bin-path --scratch-path .build-arm64)"
+
+          BIN_PATH="$BIN_ARM64"
+          if swift build -c release --arch x86_64 --product "$PRODUCT_NAME" --scratch-path .build-x86_64; then
+            echo "Building x86_64 binary..."
+            BIN_X86_64="$(swift build -c release --arch x86_64 --product "$PRODUCT_NAME" --show-bin-path --scratch-path .build-x86_64)"
+            USE_UNIVERSAL=1
+          else
+            echo "warning: x86_64 build failed; shipping arm64-only app from this run" >&2
+            USE_UNIVERSAL=0
+          fi
 
           mkdir -p dist
           APP_BUNDLE="dist/${PRODUCT_NAME}.app"
@@ -36,14 +55,23 @@ jobs:
           APP_RESOURCES="${APP_CONTENTS}/Resources"
           mkdir -p "$APP_MACOS" "$APP_RESOURCES"
 
-          cp "$BIN_PATH/$PRODUCT_NAME" "$APP_MACOS/$PRODUCT_NAME"
+          if [[ "$USE_UNIVERSAL" == "1" ]]; then
+            lipo -create \
+              "$BIN_ARM64/$PRODUCT_NAME" \
+              "$BIN_X86_64/$PRODUCT_NAME" \
+              -output "$APP_MACOS/$PRODUCT_NAME"
+            ARCH_LABEL="universal"
+          else
+            cp "$BIN_ARM64/$PRODUCT_NAME" "$APP_MACOS/$PRODUCT_NAME"
+            ARCH_LABEL="arm64"
+          fi
           chmod +x "$APP_MACOS/$PRODUCT_NAME"
 
           if [ -d "$BIN_PATH/${PRODUCT_NAME}_${PRODUCT_NAME}.resources" ]; then
             cp -R "$BIN_PATH/${PRODUCT_NAME}_${PRODUCT_NAME}.resources" "$APP_RESOURCES/"
           fi
 
-          cat > "${APP_CONTENTS}/Info.plist" <<'PLIST'
+          cat > "${APP_CONTENTS}/Info.plist" <<PLIST
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -53,68 +81,55 @@ jobs:
             <key>CFBundleExecutable</key>
             <string>PRPulseApp</string>
             <key>CFBundleIdentifier</key>
-            <string>dev.prpulse.app</string>
+            <string>${APP_BUNDLE_ID}</string>
             <key>CFBundleName</key>
             <string>PRPulse</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
-            <string>0.1.0</string>
+            <string>${VERSION}</string>
             <key>CFBundleVersion</key>
-            <string>1</string>
+            <string>${BUILD_NUMBER}</string>
             <key>LSMinimumSystemVersion</key>
-            <string>13.0</string>
+            <string>${MIN_MACOS_VERSION}</string>
             <key>LSUIElement</key>
             <true/>
           </dict>
           </plist>
           PLIST
 
-          ARCHIVE_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.tar.gz"
-          tar -czf "dist/$ARCHIVE_NAME" -C dist "${PRODUCT_NAME}.app"
+          # No Developer ID available yet; ad-hoc sign to improve local integrity checks.
+          codesign --force --deep --sign - "$APP_BUNDLE"
+          codesign --verify --deep --strict --verbose=2 "$APP_BUNDLE"
 
-          ZIP_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.zip"
-          ditto -c -k --sequesterRsrc --keepParent "dist/${PRODUCT_NAME}.app" "dist/${ZIP_NAME}"
+          ZIP_VERSIONED="${PRODUCT_NAME}-${VERSION}-macOS-${ARCH_LABEL}.zip"
+          ZIP_ALIAS="${PRODUCT_NAME}.zip"
+          ditto -c -k --sequesterRsrc --keepParent "$APP_BUNDLE" "dist/${ZIP_VERSIONED}"
+          cp "dist/${ZIP_VERSIONED}" "dist/${ZIP_ALIAS}"
 
-          DMG_NAME="${PRODUCT_NAME}-macos-${GITHUB_SHA}.dmg"
+          DMG_VERSIONED="${PRODUCT_NAME}-${VERSION}-macOS-${ARCH_LABEL}.dmg"
+          DMG_ALIAS="${PRODUCT_NAME}.dmg"
           DMG_ROOT="dist/dmg-root"
           rm -rf "$DMG_ROOT"
           mkdir -p "$DMG_ROOT"
-          cp -R "dist/${PRODUCT_NAME}.app" "$DMG_ROOT/"
+          cp -R "$APP_BUNDLE" "$DMG_ROOT/"
           ln -s /Applications "$DMG_ROOT/Applications"
-          hdiutil create -volname "PR Pulse" -srcfolder "$DMG_ROOT" -ov -format UDZO "dist/${DMG_NAME}"
-          # Simple end-user filenames for releases
-          cp "dist/${DMG_NAME}" "dist/${PRODUCT_NAME}.dmg"
-          if [[ "${GITHUB_REF:-}" == refs/tags/* ]]; then
-            cp "dist/${DMG_NAME}" "dist/${PRODUCT_NAME}-${GITHUB_REF_NAME}.dmg"
-          fi
+          hdiutil create -volname "PR Pulse" -srcfolder "$DMG_ROOT" -ov -format UDZO "dist/${DMG_VERSIONED}"
+          codesign --force --sign - "dist/${DMG_VERSIONED}"
+          cp "dist/${DMG_VERSIONED}" "dist/${DMG_ALIAS}"
 
-      - name: Publish Latest Release (default branch)
-        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: latest
-          name: PRPulse latest
-          prerelease: true
-          make_latest: false
-          target_commitish: ${{ github.sha }}
-          files: |
-            dist/PRPulseApp.dmg
-          overwrite_files: true
+          echo "ARCH_LABEL=${ARCH_LABEL}" >> "$GITHUB_ENV"
 
-      - name: Publish Versioned Release (tags only)
+      - name: Publish GitHub Release (tags)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          name: PRPulse ${{ github.ref_name }}
+          prerelease: false
+          make_latest: true
           overwrite_files: true
           files: |
-            dist/PRPulseApp-${{ github.ref_name }}.dmg
-
-      - name: Upload workflow artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PRPulseApp-macos-${{ github.sha }}
-          path: |
             dist/PRPulseApp.dmg
-            dist/*.zip
-            dist/*.tar.gz
+            dist/PRPulseApp.zip
+            dist/PRPulseApp-${{ github.ref_name }}-macOS-*.dmg
+            dist/PRPulseApp-${{ github.ref_name }}-macOS-*.zip

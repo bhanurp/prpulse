@@ -36,7 +36,7 @@ You can run PR Pulse without Xcode by downloading the DMG from GitHub Releases.
 Single-command install and open (latest GitHub Release):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scripts/install_latest_release.sh)" -- <owner>/<repo>
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bhanurp/PRPulse/main/scripts/install_latest_release.sh)" -- bhanurp/PRPulse
 ```
 
 1. Open repository `Releases`.
@@ -47,6 +47,26 @@ bash -c "$(curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/scri
 ```bash
 open /Applications/PRPulseApp.app
 ```
+
+If macOS blocks launch because the app is from an unidentified developer, run once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/PRPulseApp.app
+open /Applications/PRPulseApp.app
+```
+
+## Release Publishing
+
+Create and push a version tag to publish installable assets to Releases:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Each release publishes:
+- `PRPulseApp.dmg`
+- `PRPulseApp.zip`
 
 ## Build and Run from Source
 
