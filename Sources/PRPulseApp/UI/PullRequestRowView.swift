@@ -4,6 +4,7 @@ import AppKit
 struct PullRequestRowView: View {
     var presentation: PullRequestPresentation
     var actionHandler: (DashboardViewModel.QuickAction) -> Void
+    var showAuthor: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -12,12 +13,38 @@ struct PullRequestRowView: View {
                     Text(presentation.pullRequest.title)
                         .font(.headline)
                         .lineLimit(2)
-                    Text(presentation.subtitle)
+                    Text(metadataText)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                readinessBadge
+                VStack(alignment: .trailing, spacing: 4) {
+                    readinessBadge
+                    if !presentation.pullRequest.detail.linkedReferences.isEmpty {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("Linked")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            ForEach(Array(presentation.pullRequest.detail.linkedReferences.prefix(3))) { ref in
+                                if let url = linkedReferenceURL(ref) {
+                                    Link(linkedReferenceLabel(ref), destination: url)
+                                        .font(.caption2)
+                                        .lineLimit(1)
+                                } else {
+                                    Text(linkedReferenceLabel(ref))
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                            if presentation.pullRequest.detail.linkedReferences.count > 3 {
+                                Text("+\(presentation.pullRequest.detail.linkedReferences.count - 3) more")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                }
             }
 
             HStack(spacing: 12) {
@@ -85,6 +112,13 @@ struct PullRequestRowView: View {
         }
     }
 
+    private var metadataText: String {
+        guard showAuthor else {
+            return presentation.subtitle
+        }
+        return "\(presentation.subtitle) · @\(presentation.pullRequest.author.login)"
+    }
+
     private var readinessBadge: some View {
         switch presentation.status.readiness {
         case .ready:
@@ -108,6 +142,20 @@ struct PullRequestRowView: View {
                 .padding(6)
                 .background(Capsule().fill(Color.gray.opacity(0.2)))
         }
+    }
+
+    private func linkedReferenceLabel(_ ref: PullRequestDetail.LinkedReference) -> String {
+        let kind = ref.type == .issue ? "Issue" : "PR"
+        return "\(kind) #\(ref.number)"
+    }
+
+    private func linkedReferenceURL(_ ref: PullRequestDetail.LinkedReference) -> URL? {
+        if let url = ref.url {
+            return url
+        }
+
+        let pathPart = ref.type == .issue ? "issues" : "pull"
+        return URL(string: "https://github.com/\(ref.repositoryNameWithOwner)/\(pathPart)/\(ref.number)")
     }
 }
 

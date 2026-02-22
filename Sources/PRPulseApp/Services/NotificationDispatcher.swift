@@ -97,6 +97,29 @@ actor NotificationDispatcher {
         }
     }
 
+    func sendTestNotification() async {
+        guard notificationsSupported() else { return }
+        let center = UNUserNotificationCenter.current()
+
+        let content = UNMutableNotificationContent()
+        content.title = "PR Pulse Test Notification"
+        content.body = "Notifications are working."
+        content.categoryIdentifier = "pr_actions"
+
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "prpulse-test-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+
+        do {
+            try await center.add(request)
+        } catch {
+            NSLog("Failed to schedule test notification: \(error.localizedDescription)")
+        }
+    }
+
     private func configureCategories(center: UNUserNotificationCenter) {
         let openAction = UNNotificationAction(
             identifier: "open",
@@ -128,4 +151,3 @@ actor NotificationDispatcher {
         center.setNotificationCategories([category])
     }
 }
-

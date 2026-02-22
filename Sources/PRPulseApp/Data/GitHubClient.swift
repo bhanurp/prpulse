@@ -178,11 +178,68 @@ struct GitHubAPIClient: GitHubClient {
                 return PullRequestDetail.Review(reviewer: reviewer, state: state, submittedAt: submittedAt)
             }
 
+            var linkedRefs: [PullRequestDetail.LinkedReference] = []
+
+            for issue in node.closingIssuesReferences?.nodes ?? [] {
+                guard let issue,
+                      let number = issue.number,
+                      let repo = issue.repository?.nameWithOwner else { continue }
+                linkedRefs.append(
+                    PullRequestDetail.LinkedReference(
+                        type: .issue,
+                        repositoryNameWithOwner: repo,
+                        number: number,
+                        url: issue.url.flatMap(URL.init(string:))
+                    )
+                )
+            }
+
+            for crossRef in node.timelineItems?.nodes ?? [] {
+                guard let source = crossRef?.source,
+                      let typeName = source.typeName,
+                      let number = source.number,
+                      let repo = source.repository?.nameWithOwner else { continue }
+
+                let type: PullRequestDetail.LinkedReferenceType
+                switch typeName {
+                case "Issue":
+                    type = .issue
+                case "PullRequest":
+                    type = .pullRequest
+                default:
+                    continue
+                }
+
+                linkedRefs.append(
+                    PullRequestDetail.LinkedReference(
+                        type: type,
+                        repositoryNameWithOwner: repo,
+                        number: number,
+                        url: source.url.flatMap(URL.init(string:))
+                    )
+                )
+            }
+
+            var deduped: [String: PullRequestDetail.LinkedReference] = [:]
+            for ref in linkedRefs {
+                deduped[ref.id] = ref
+            }
+            let sortedLinkedRefs = deduped.values.sorted { lhs, rhs in
+                if lhs.type != rhs.type {
+                    return lhs.type.rawValue < rhs.type.rawValue
+                }
+                if lhs.repositoryNameWithOwner != rhs.repositoryNameWithOwner {
+                    return lhs.repositoryNameWithOwner < rhs.repositoryNameWithOwner
+                }
+                return lhs.number < rhs.number
+            }
+
             detailByID[id] = PullRequestDetail(
                 mergeable: mergeable,
                 reviewDecision: reviewDecision,
                 latestCommitAt: latestCommitAt,
-                reviews: reviews
+                reviews: reviews,
+                linkedReferences: sortedLinkedRefs
             )
         }
 
@@ -318,6 +375,32 @@ struct GitHubAPIClient: GitHubClient {
               submittedAt
             }
           }
+          closingIssuesReferences(first: 10) {
+            nodes {
+              number
+              url
+              repository { nameWithOwner }
+            }
+          }
+          timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], first: 20) {
+            nodes {
+              ... on CrossReferencedEvent {
+                source {
+                  __typename
+                  ... on Issue {
+                    number
+                    url
+                    repository { nameWithOwner }
+                  }
+                  ... on PullRequest {
+                    number
+                    url
+                    repository { nameWithOwner }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -418,11 +501,48 @@ private struct DetailData: Decodable {
             let nodes: [ReviewNode?]
         }
 
+        struct ClosingIssuesReferences: Decodable {
+            struct IssueNode: Decodable {
+                struct Repository: Decodable {
+                    let nameWithOwner: String?
+                }
+                let number: Int?
+                let url: String?
+                let repository: Repository?
+            }
+            let nodes: [IssueNode?]
+        }
+
+        struct TimelineItems: Decodable {
+            struct CrossRefNode: Decodable {
+                struct Source: Decodable {
+                    struct Repository: Decodable {
+                        let nameWithOwner: String?
+                    }
+                    let typeName: String?
+                    let number: Int?
+                    let url: String?
+                    let repository: Repository?
+
+                    enum CodingKeys: String, CodingKey {
+                        case typeName = "__typename"
+                        case number
+                        case url
+                        case repository
+                    }
+                }
+                let source: Source?
+            }
+            let nodes: [CrossRefNode?]
+        }
+
         let id: String?
         let mergeable: String?
         let reviewDecision: String?
         let commits: Commits?
         let reviews: Reviews?
+        let closingIssuesReferences: ClosingIssuesReferences?
+        let timelineItems: TimelineItems?
     }
 
     let nodes: [PullRequestNode?]
@@ -474,7 +594,8 @@ struct MockGitHubClient: GitHubClient {
                 mergeable: isDraft ? .unknown : (index % 2 == 0 ? .mergeable : .conflicting),
                 reviewDecision: index % 3 == 0 ? .approved : .reviewRequired,
                 latestCommitAt: Date().addingTimeInterval(Double(-index * 18_000)),
-                reviews: makeReviews(index: index, currentUser: currentUser)
+                reviews: makeReviews(index: index, currentUser: currentUser),
+                linkedReferences: makeLinkedReferences(index: index, repository: repo.nameWithOwner)
             )
             let pr = PullRequest(
                 id: UUID().uuidString,
@@ -524,5 +645,30 @@ struct MockGitHubClient: GitHubClient {
             reviews.append(review)
         }
         return reviews
+    }
+
+    private static func makeLinkedReferences(index: Int, repository: String) -> [PullRequestDetail.LinkedReference] {
+        var refs: [PullRequestDetail.LinkedReference] = []
+        if index % 2 == 0 {
+            refs.append(
+                PullRequestDetail.LinkedReference(
+                    type: .issue,
+                    repositoryNameWithOwner: repository,
+                    number: 200 + index,
+                    url: URL(string: "https://github.com/\(repository)/issues/\(200 + index)")
+                )
+            )
+        }
+        if index % 3 == 0 {
+            refs.append(
+                PullRequestDetail.LinkedReference(
+                    type: .pullRequest,
+                    repositoryNameWithOwner: repository,
+                    number: 300 + index,
+                    url: URL(string: "https://github.com/\(repository)/pull/\(300 + index)")
+                )
+            )
+        }
+        return refs
     }
 }

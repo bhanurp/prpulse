@@ -150,7 +150,8 @@ struct ContentView: View {
                         presentation: presentation,
                         actionHandler: { action in
                             viewModel.perform(action: action, on: presentation)
-                        }
+                        },
+                        showAuthor: viewModel.selectedTab == .reviewRequested
                     )
                 }
 

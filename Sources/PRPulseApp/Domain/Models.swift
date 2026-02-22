@@ -51,6 +51,22 @@ struct PullRequest: Identifiable, Codable, Equatable, Hashable {
 }
 
 struct PullRequestDetail: Codable, Equatable, Hashable {
+    enum LinkedReferenceType: String, Codable {
+        case issue
+        case pullRequest
+    }
+
+    struct LinkedReference: Codable, Equatable, Hashable, Identifiable {
+        var type: LinkedReferenceType
+        var repositoryNameWithOwner: String
+        var number: Int
+        var url: URL?
+
+        var id: String {
+            "\(type.rawValue):\(repositoryNameWithOwner)#\(number)"
+        }
+    }
+
     enum MergeableState: String, Codable {
         case mergeable = "MERGEABLE"
         case conflicting = "CONFLICTING"
@@ -82,17 +98,20 @@ struct PullRequestDetail: Codable, Equatable, Hashable {
     var reviewDecision: ReviewDecision?
     var latestCommitAt: Date?
     var reviews: [Review]
+    var linkedReferences: [LinkedReference]
 
     init(
         mergeable: MergeableState = .unknown,
         reviewDecision: ReviewDecision? = nil,
         latestCommitAt: Date? = nil,
-        reviews: [Review] = []
+        reviews: [Review] = [],
+        linkedReferences: [LinkedReference] = []
     ) {
         self.mergeable = mergeable
         self.reviewDecision = reviewDecision
         self.latestCommitAt = latestCommitAt
         self.reviews = reviews
+        self.linkedReferences = linkedReferences
     }
 }
 
@@ -235,4 +254,3 @@ struct AppSettings: Codable, Equatable {
         )
     }
 }
-

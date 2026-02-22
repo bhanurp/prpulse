@@ -231,22 +231,7 @@ final class DashboardViewModel: ObservableObject {
     func testNotification() {
         Task { @MainActor in
             await notifier.requestAuthorizationIfNeeded()
-            // Schedule a lightweight local notification via notifier if available
-            // Reuse snooze reminder API as a simple immediate notification fallback
-            let pr = PullRequest(
-                id: "test",
-                number: 0,
-                title: "PR Pulse Test Notification",
-                url: URL(string: "https://example.com")!,
-                repository: PullRequest.Repository(nameWithOwner: "dev/prpulse"),
-                author: PullRequest.Author(login: viewerLogin.isEmpty ? "me" : viewerLogin),
-                createdAt: Date(),
-                updatedAt: Date(),
-                isDraft: false
-            )
-            // Schedule for 5 seconds from now to demonstrate delivery
-            let date = Date().addingTimeInterval(5)
-            await notifier.scheduleSnoozeReminder(for: pr, until: date)
+            await notifier.sendTestNotification()
         }
     }
 
@@ -306,6 +291,8 @@ final class DashboardViewModel: ObservableObject {
                 enriched.append(item)
             }
 
+            await recordActivityEvents(from: enriched, tab: tab)
+
             if reset {
                 state.rawItems = enriched
             } else {
@@ -320,6 +307,7 @@ final class DashboardViewModel: ObservableObject {
             updateBadgeCount()
             lastRefreshAt = Date()
             markConnected()
+            await updateDigest()
         } catch {
             state.isLoading = false
             listStates[tab] = state
@@ -397,6 +385,55 @@ final class DashboardViewModel: ObservableObject {
         let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: now) ?? now
         let events = await store.recentActivity(since: cutoff)
         digestSnapshot = digestComputer.makeSnapshot(from: events, cadence: cadence)
+    }
+
+    private func recordActivityEvents(from pullRequests: [PullRequest], tab: PullRequestTab) async {
+        let now = Date()
+        let viewer = viewerLogin.lowercased()
+
+        for pr in pullRequests {
+            if tab == .mine {
+                let key = "activity-opened-\(pr.id)"
+                if await store.ledgerTimestamp(for: key) == nil {
+                    do {
+                        try await store.appendActivity(ActivityEvent(type: .openedMyPR, date: now))
+                        try await store.updateLedger(date: now, for: key)
+                    } catch {
+                        // Activity logging should not break refresh behavior.
+                    }
+                }
+            }
+
+            guard !viewer.isEmpty, viewer != "me" else { continue }
+            guard let latestMyReviewAt = latestReviewDateByCurrentUser(in: pr) else { continue }
+
+            let stamp = Int(latestMyReviewAt.timeIntervalSince1970)
+            let key = "activity-reviewed-observed-\(pr.id)-\(stamp)"
+            if await store.ledgerTimestamp(for: key) == nil {
+                do {
+                    try await store.appendActivity(ActivityEvent(type: .reviewedPR, date: now))
+                    try await store.updateLedger(date: now, for: key)
+                } catch {
+                    // Activity logging should not break refresh behavior.
+                }
+            }
+        }
+    }
+
+    private func latestReviewDateByCurrentUser(in pullRequest: PullRequest) -> Date? {
+        let viewer = viewerLogin.lowercased()
+        return pullRequest.detail.reviews
+            .filter { review in
+                guard review.reviewer.lowercased() == viewer else { return false }
+                switch review.state {
+                case .approved, .changesRequested, .commented:
+                    return true
+                case .dismissed:
+                    return false
+                }
+            }
+            .map(\.submittedAt)
+            .max()
     }
 
     private func markConnected() {

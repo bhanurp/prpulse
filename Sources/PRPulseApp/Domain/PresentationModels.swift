@@ -20,4 +20,16 @@ struct PullRequestPresentation: Identifiable, Equatable {
             return "Needs re-review"
         }
     }
+
+    var linkedReferencesSummary: String {
+        let refs = pullRequest.detail.linkedReferences
+        guard !refs.isEmpty else { return "" }
+
+        let labels = refs.prefix(3).map { ref in
+            let kind = ref.type == .issue ? "Issue" : "PR"
+            return "\(kind) #\(ref.number)"
+        }
+        let extra = refs.count > 3 ? " +\(refs.count - 3)" : ""
+        return "Linked: " + labels.joined(separator: " • ") + extra
+    }
 }
