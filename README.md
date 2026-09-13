@@ -27,7 +27,7 @@ It also supports triage actions, snoozing, notifications, and digest snapshots.
 
 - macOS 13+
 - GitHub token with read access to pull requests
-- For building from source: Xcode or a Swift toolchain compatible with Swift 6.2.
+- For building from source: Xcode with Swift 6.2 (or later), or a compatible standalone Swift toolchain.
 
 ## Quick Start (Prebuilt Binary)
 
@@ -76,7 +76,7 @@ Each release publishes:
 
 ```bash
 git clone https://github.com/bhanurp/prpulse.git
-cd PRPulse
+cd prpulse
 swift build -c release --product PRPulseApp
 ./scripts/install_prpulse.sh
 open "$HOME/Applications/PRPulseApp.app"
