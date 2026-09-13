@@ -1,0 +1,30 @@
+name: Feature request
+description: Propose a workflow improvement for PR Pulse
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: "GitHub issues are public. Do not include tokens, private repository or organization names, secrets in logs, screenshots, or URLs, or confidential or personal data."
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: "Describe the repeated PR workflow that is currently difficult."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: "Describe what a successful experience would let you do."
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: "Describe any current workaround or similar tool."
+    validations:
+      required: true

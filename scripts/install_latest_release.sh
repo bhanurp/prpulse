@@ -93,8 +93,8 @@ install_app() {
   echo "Installing ${app_name} to ${INSTALL_ROOT}..."
   rm -rf "$dest"
   /usr/bin/ditto "$source_app" "$dest"
-  # Remove download quarantine metadata so unsigned/dev builds can launch.
-  xattr -dr com.apple.quarantine "$dest" 2>/dev/null || true
+  echo "If macOS blocks the first launch, remove quarantine only from this trusted release copy:"
+  echo "  xattr -dr com.apple.quarantine \"${dest}\""
   echo "Opening ${app_name}..."
   open "$dest"
 }
