@@ -44,7 +44,7 @@ fi
 API_URL="https://api.github.com/repos/${REPO}/releases/latest"
 RELEASE_JSON="$(curl -fsSL -H "Accept: application/vnd.github+json" "$API_URL")"
 
-ASSET_URL="$(printf '%s' "$RELEASE_JSON" | python3 - <<'PY'
+ASSET_URL="$(printf '%s' "$RELEASE_JSON" | python3 -c '
 import json
 import sys
 
@@ -60,8 +60,7 @@ for ext in preferred_exts:
             raise SystemExit(0)
 
 raise SystemExit(1)
-PY
-)" || true
+')" || true
 
 if [[ -z "$ASSET_URL" ]]; then
   echo "error: no installable .dmg/.zip/.tar.gz asset found in latest release for ${REPO}" >&2
