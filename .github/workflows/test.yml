@@ -20,3 +20,5 @@ jobs:
           xcode-version: latest-stable
       - name: Run test suite
         run: swift test
+      - name: Run installer tests
+        run: bash Tests/InstallerTests/test_install_latest_release.sh
