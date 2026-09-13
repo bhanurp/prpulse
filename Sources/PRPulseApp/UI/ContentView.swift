@@ -92,7 +92,9 @@ struct ContentView: View {
                 .keyboardShortcut("r")
 
                 Button {
-                    openWindow(id: "settings-window")
+                    SettingsWindowPresenter.showSettingsWindow {
+                        openWindow(id: "settings-window")
+                    }
                 } label: {
                     Image(systemName: "gearshape")
                 }
