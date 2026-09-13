@@ -17,6 +17,7 @@ DerivedData/
 /.tmp/
 /dist/
 /.superpowers/
+/.worktrees/
 *.log
 
 # Bundles/artifacts
