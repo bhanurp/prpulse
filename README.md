@@ -27,7 +27,7 @@ It also supports triage actions, snoozing, notifications, and digest snapshots.
 
 - macOS 13+
 - GitHub token with read access to pull requests
-- For building from source: Xcode 15+ (or Swift toolchain compatible with the package)
+- For building from source: Xcode or a Swift toolchain compatible with Swift 6.2.
 
 ## Quick Start (Prebuilt Binary)
 
@@ -36,8 +36,12 @@ You can run PR Pulse without Xcode by downloading the DMG from GitHub Releases.
 Single-command install and open (latest GitHub Release):
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/bhanurp/PRPulse/main/scripts/install_latest_release.sh)" -- bhanurp/PRPulse
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/bhanurp/prpulse/master/scripts/install_latest_release.sh)" -- bhanurp/prpulse
 ```
+
+This command requires a stable GitHub Release. Pre-releases are intentionally excluded so it always installs the latest tested public version.
+
+PR Pulse is currently ad-hoc signed, not notarized. If macOS blocks the first launch, follow the Gatekeeper command below. Do not bypass Gatekeeper for builds downloaded from any source other than this repository’s Releases page.
 
 1. Open repository `Releases`.
 2. Download `PRPulseApp.dmg`.
@@ -71,7 +75,7 @@ Each release publishes:
 ## Build and Run from Source
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/bhanurp/prpulse.git
 cd PRPulse
 swift build -c release --product PRPulseApp
 ./scripts/install_prpulse.sh
@@ -205,3 +209,10 @@ If `swift test` or `swift build` fails with toolchain/sandbox cache issues, runn
 ---
 
 If you are publishing this app externally, keep this README and screenshot folder in sync with UI and behavior changes.
+
+## Community and support
+
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+- Report reproducible defects and feature requests through [Issues](https://github.com/bhanurp/prpulse/issues).
+- Read [SECURITY.md](SECURITY.md) for private vulnerability reporting.
+- See [CHANGELOG.md](CHANGELOG.md) for release history and known limitations.
