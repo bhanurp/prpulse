@@ -21,18 +21,39 @@ if [[ "$*" == *"/releases/latest"* ]]; then
   exit 0
 fi
 
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "-o" ]]; then
+    : > "$2"
+    exit 0
+  fi
+  shift
+done
+
 exit 1
 SCRIPT
 
 cat > "$TEST_DIR/bin/hdiutil" <<'SCRIPT'
 #!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$1" == "attach" ]]; then
+  mkdir -p "$TEST_MOUNT"
+  printf '/dev/disk9\tApple_HFS\t%s\n' "$TEST_MOUNT"
+  exit 0
+fi
+
+if [[ "$1" == "detach" ]]; then
+  exit 0
+fi
+
 exit 1
 SCRIPT
 
 chmod +x "$TEST_DIR/bin/curl" "$TEST_DIR/bin/hdiutil"
 
 set +e
-OUTPUT="$(PATH="$TEST_DIR/bin:$PATH" OSTYPE=darwin bash "$PROJECT_DIR/scripts/install_latest_release.sh" bhanurp/prpulse 2>&1)"
+TEST_MOUNT="$TEST_DIR/PR Pulse"
+OUTPUT="$(PATH="$TEST_DIR/bin:$PATH" TEST_MOUNT="$TEST_MOUNT" OSTYPE=darwin bash "$PROJECT_DIR/scripts/install_latest_release.sh" bhanurp/prpulse 2>&1)"
 STATUS=$?
 set -e
 
@@ -43,6 +64,18 @@ fi
 
 if [[ "$OUTPUT" != *"Downloading PRPulseApp.dmg..."* ]]; then
   echo "expected installer to select the DMG asset before mounting it" >&2
+  echo "$OUTPUT" >&2
+  exit 1
+fi
+
+if [[ "$OUTPUT" != *"error: no .app found inside PRPulseApp.dmg"* ]]; then
+  echo "expected installer to search the complete mounted volume path" >&2
+  echo "$OUTPUT" >&2
+  exit 1
+fi
+
+if [[ "$OUTPUT" == *"find: Pulse"* ]]; then
+  echo "installer truncated the mounted volume path at its space" >&2
   echo "$OUTPUT" >&2
   exit 1
 fi
