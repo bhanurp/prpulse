@@ -93,7 +93,8 @@ install_app() {
   echo "Installing ${app_name} to ${INSTALL_ROOT}..."
   rm -rf "$dest"
   /usr/bin/ditto "$source_app" "$dest"
-  echo "If macOS blocks the first launch, follow the Gatekeeper instructions in the README."
+  echo "If macOS blocks the first launch, remove quarantine only from this trusted release copy:"
+  echo "  xattr -dr com.apple.quarantine \"${dest}\""
   echo "Opening ${app_name}..."
   open "$dest"
 }
