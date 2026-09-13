@@ -2,8 +2,11 @@ name: Feature request
 description: Propose a workflow improvement for PR Pulse
 title: "[Feature]: "
 labels:
-  - feature
+  - enhancement
 body:
+  - type: markdown
+    attributes:
+      value: "GitHub issues are public. Do not include tokens, private repository or organization names, secrets in logs, screenshots, or URLs, or confidential or personal data."
   - type: textarea
     id: problem
     attributes:

@@ -6,7 +6,7 @@ labels:
 body:
   - type: markdown
     attributes:
-      value: "Please remove all GitHub tokens and private repository names before submitting."
+      value: "GitHub issues are public. Do not include tokens, private repository or organization names, secrets in logs, screenshots, or URLs, or confidential or personal data."
   - type: input
     id: version
     attributes:
