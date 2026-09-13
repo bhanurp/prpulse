@@ -28,6 +28,9 @@ jobs:
       - name: Run test suite
         run: swift test
 
+      - name: Run installer tests
+        run: bash Tests/InstallerTests/test_install_latest_release.sh
+
       - name: Build app bundle
         shell: bash
         run: |
