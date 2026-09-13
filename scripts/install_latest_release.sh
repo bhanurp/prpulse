@@ -100,7 +100,7 @@ install_app() {
 
 if [[ "$ASSET_NAME" == *.dmg ]]; then
   ATTACH_OUTPUT="$(hdiutil attach "$ASSET_PATH" -nobrowse)"
-  MOUNT_POINT="$(printf '%s\n' "$ATTACH_OUTPUT" | awk 'END{print $NF}')"
+  MOUNT_POINT="$(printf '%s\n' "$ATTACH_OUTPUT" | awk -F '\t' 'END{print $NF}')"
   APP_IN_DMG="$(find "$MOUNT_POINT" -maxdepth 1 -name "*.app" -print -quit)"
 
   if [[ -z "$APP_IN_DMG" ]]; then
