@@ -124,7 +124,7 @@ jobs:
           echo "ARCH_LABEL=${ARCH_LABEL}" >> "$GITHUB_ENV"
 
       - name: Publish GitHub Release (tags)
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && !contains(github.ref_name, '-')
         uses: softprops/action-gh-release@v2
         with:
           name: PRPulse ${{ github.ref_name }}
